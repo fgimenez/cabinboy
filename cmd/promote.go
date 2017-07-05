@@ -22,29 +22,27 @@ var (
 		Short: "Move chart among channels",
 		Long: `This command let's you change the channel of a chart.
 
-By default it just needs to know the chart name, the origin channel and the target
-channel. It includes a mechanism to allow rollbacks, before promoting to channelB
-from channelA, the chart existing in channelB, if any, is moved to channelB-rollback`,
+By default it just needs to know the chart name, the origin channel and chart version`,
 		Run: runPromote,
 	}
-	fromChannel  string
 	toChannel    string
 	username     string
 	password     string
 	project      string
 	organisation string
+	version      string
 )
 
 func init() {
 	RootCmd.AddCommand(promoteCmd)
 
-	promoteCmd.Flags().StringVar(&fromChannel, "from", "", "Origin channel")
 	promoteCmd.Flags().StringVar(&toChannel, "to", "", "Target channel")
 
 	promoteCmd.Flags().StringVar(&username, "username", os.Getenv("QUAY_USERNAME"), "username to use to login to docker registry")
 	promoteCmd.Flags().StringVar(&password, "password", os.Getenv("QUAY_PASSWORD"), "password to use to login to docker registry")
-	promoteCmd.Flags().StringVar(&project, "project", "", "Project name")
-	promoteCmd.Flags().StringVar(&organisation, "organisation", "", "Organisation")
+	promoteCmd.Flags().StringVar(&project, "project", os.Getenv("CIRCLE_PROJECT_REPONAME")+"-chart", "Project name")
+	promoteCmd.Flags().StringVar(&organisation, "organisation", os.Getenv("CIRCLE_PROJECT_USERNAME"), "Organisation")
+	promoteCmd.Flags().StringVar(&version, "version", "", "Chart version")
 }
 
 func runPromote(cmd *cobra.Command, args []string) {
@@ -89,9 +87,9 @@ func helmChannelPromotion() error {
 		helmImage,
 		"registry",
 		"channel",
-		"--channel"+toChannel,
+		"--channel "+toChannel,
 		"--set-release",
-		fmt.Sprintf("quay.io/%s/%s", organisation, project))
+		fmt.Sprintf("quay.io/%s/%s@%s", organisation, project, version))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
